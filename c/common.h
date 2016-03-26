@@ -6,7 +6,7 @@
 
 #define DIE(...) { g_critical(__VA_ARGS__) ; exit(-1) ; }
 
-typedef unsigned long pint ;
+typedef uintptr_t pint ;
 
 struct array {
     pint magic ;
