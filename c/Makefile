@@ -1,8 +1,8 @@
 
 LDFLAGS = $(shell pkg-config --libs glib-2.0) -L/usr/local/lib \
-	  -g # -O3
+	  -O3
 CFLAGS	= $(shell pkg-config --cflags glib-2.0) -I/usr/local/include -Wall \
-	  -g # -O3 -fomit-frame-pointer
+	  -O3 -fomit-frame-pointer
 CC	= gcc
 LD	= gcc
 

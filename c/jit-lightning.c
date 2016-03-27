@@ -1,4 +1,4 @@
-// #define G_DISABLE_ASSERT 1
+#define G_DISABLE_ASSERT 1
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,21 +13,18 @@
 static pint r[8] ;
 static pint pc ;
 static pint hint ;
-static uintptr_t regs[8] = {
-    JIT_R(1), JIT_R(2), JIT_R(3), JIT_R(4),
-    JIT_R(5), JIT_R(6), JIT_R(7), JIT_R(8)
-} ;
+static pint regs[8] = {2, 3, 4, 5, 6, 7, 8, 9} ;
 
 #define R1 JIT_R(0)
-#define R2 JIT_R(9)
+#define R2 JIT_R(10)
 
-#define C   regs[ins & 7]
-#define B   regs[(ins >> 3) & 7]
-#define A   regs[(ins >> 6) & 7]
-#define X   regs[(ins >> 25) & 7]
+#define C   JIT_R(regs[ins & 7])
+#define B   JIT_R(regs[(ins >> 3) & 7])
+#define A   JIT_R(regs[(ins >> 6) & 7])
+#define X   JIT_R(regs[(ins >> 25) & 7])
 
-#define LOAD_REGS() for (int i = 0; i < 8; i ++) jit_ldi(regs[i], &r[i])
-#define SAVE_REGS() for (int i = 0; i < 8; i ++) jit_sti(&r[i], regs[i]) ;
+#define LOAD_REGS() for (int i = 0; i < 8; i ++) jit_ldi(JIT_R(regs[i]), &r[i])
+#define SAVE_REGS() for (int i = 0; i < 8; i ++) jit_sti(&r[i], JIT_R(regs[i]))
 
 intptr_t (*code)(void *p) ;
 void **jumps ;
@@ -43,14 +40,13 @@ static void init_code(void) {
 
     _jit = jit_new_state() ;
 
-            jit_note(__FILE__, __LINE__) ;
-            jit_prolog() ;
-            jit_getarg(R1, jit_arg()) ;
-            LOAD_REGS() ;
-            jit_jmpr(R1) ;
+    jit_prolog() ;
+    jit_getarg(R1, jit_arg()) ;
+    LOAD_REGS() ;
+    jit_jmpr(R1) ;
     leave = jit_note(__FILE__, __LINE__) ;
-            SAVE_REGS() ;
-            jit_retr(R1) ;
+    SAVE_REGS() ;
+    jit_retr(R1) ;
 
     code_used = 0 ;
 
