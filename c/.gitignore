@@ -3,3 +3,4 @@ goto
 switch
 jit-dynasm
 jit-dynasm.c
+jit-lightning

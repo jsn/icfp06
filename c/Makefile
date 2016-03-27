@@ -1,6 +1,8 @@
 
-LDFLAGS = $(shell pkg-config --libs glib-2.0) -O3
-CFLAGS	= $(shell pkg-config --cflags glib-2.0) -Wall -O3 -fomit-frame-pointer
+LDFLAGS = $(shell pkg-config --libs glib-2.0) -L/usr/local/lib \
+	  -g # -O3
+CFLAGS	= $(shell pkg-config --cflags glib-2.0) -I/usr/local/include -Wall \
+	  -g # -O3 -fomit-frame-pointer
 CC	= gcc
 LD	= gcc
 
@@ -23,3 +25,8 @@ jit-dynasm:	jit-dynasm.c $(COMMON)
 
 jit-dynasm.c: jit-dynasm.dasm
 	luajit dynasm/dynasm.lua -D X64 -o jit-dynasm.c jit-dynasm.dasm
+
+jit-lightning:	jit-lightning.c $(COMMON)
+	$(CC) -o $@ $< \
+	    $(CFLAGS) $(COMMON) $(LDFLAGS) \
+	    -llightning -ldl
