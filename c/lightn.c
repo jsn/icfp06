@@ -13,7 +13,7 @@
 static pint r[8] ;
 static pint pc ;
 static pint hint ;
-static pint regs[8] = {2, 3, 4, 5, 6, 7, 8, 9} ;
+const static pint regs[8] = {2, 3, 4, 5, 6, 7, 8, 9} ;
 
 #define R1 JIT_R(0)
 #define R2 JIT_R(10)
