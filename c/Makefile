@@ -11,8 +11,10 @@ COMMON	= common.o
 
 all: switch goto
 
+more: all dasm-x64 lightn
+
 clean:
-	rm -f $(OBJS) $(COMMON) goto switch jit-dynasm jit-dynasm.c
+	rm -f $(OBJS) $(COMMON) goto switch dasm-x64 dasm-x64.c lightn
 
 goto:	goto.o $(COMMON) common.h
 	$(LD) -o $@ $< $(COMMON) $(LDFLAGS)
@@ -20,13 +22,11 @@ goto:	goto.o $(COMMON) common.h
 switch:	switch.o $(COMMON) common.h
 	$(LD) -o $@ $< $(COMMON) $(LDFLAGS)
 
-jit-dynasm:	jit-dynasm.c $(COMMON)
-	$(CC) -I. -o jit-dynasm jit-dynasm.c $(CFLAGS) $(COMMON) $(LDFLAGS)
+dasm-x64:	dasm-x64.c $(COMMON) common.h
+	$(CC) -I. -o dasm-x64 dasm-x64.c $(CFLAGS) $(COMMON) $(LDFLAGS)
 
-jit-dynasm.c: jit-dynasm.dasm
-	luajit dynasm/dynasm.lua -D X64 -o jit-dynasm.c jit-dynasm.dasm
+dasm-x64.c: dasm-x64.dasm
+	luajit dynasm/dynasm.lua -D X64 -o dasm-x64.c dasm-x64.dasm
 
-jit-lightning:	jit-lightning.c $(COMMON)
-	$(CC) -o $@ $< \
-	    $(CFLAGS) $(COMMON) $(LDFLAGS) \
-	    -llightning -ldl
+lightn:	lightn.c $(COMMON) common.h
+	$(CC) -o $@ $< $(CFLAGS) $(COMMON) $(LDFLAGS) -llightning -ldl

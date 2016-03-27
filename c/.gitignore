@@ -1,6 +1,6 @@
 *.o
 goto
 switch
-jit-dynasm
-jit-dynasm.c
-jit-lightning
+dasm-x64
+dasm-x64.c
+lightn
