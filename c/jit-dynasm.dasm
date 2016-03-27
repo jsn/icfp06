@@ -120,7 +120,6 @@ static void compile(void) {
                 | mov esi, [C] // XXX
                 | int3
                 |2:
-                #endif
                 | add rdx, 8
                 | mov rax, [rdx]
                 | cmp [C], rax
@@ -129,6 +128,9 @@ static void compile(void) {
                 | int3
                 |3:
                 | add rdx, 8
+                #else
+                | add rdx, 16
+                #endif
                 | mov rax, [C]
                 | shl rax, 3
                 | add rdx, rax
@@ -150,7 +152,6 @@ static void compile(void) {
                 | mov esi, [B] // XXX
                 | int3
                 |2:
-                #endif
                 | add rdx, 8
                 | mov rax, [rdx]
                 | cmp [B], rax
@@ -159,6 +160,9 @@ static void compile(void) {
                 | int3
                 |3:
                 | add rdx, 8
+                #else
+                | add rdx, 16
+                #endif
                 | mov rax, [B]
                 | shl rax, 3
                 | add rdx, rax
