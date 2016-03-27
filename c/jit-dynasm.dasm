@@ -1,0 +1,334 @@
+// vim:set ft=c:
+#define G_DISABLE_ASSERT 1
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "common.h"
+
+#include <sys/mman.h>
+
+#include "dynasm/dasm_proto.h"
+#include "dynasm/dasm_x86.h"
+
+#define MAXCODE     (1 << 28)
+
+pint r[8] ;
+pint pc ;
+pint hint ;
+
+#define C   (r + (ins & 7))
+#define B   (r + ((ins >> 3) & 7))
+#define A   (r + ((ins >> 6) & 7))
+#define X   (r + ((ins >> 25) & 7))
+
+int (*code)(void *p) ;
+void **jumps ;
+size_t code_used ;
+void *um_leave ;
+
+| .if X86
+  | .arch x86
+| .elif X64
+  | .arch x64
+| .endif
+
+static void fputc1(int c) {
+    fputc(c, stdout) ;
+}
+
+static void init_code(void) {
+    if (jumps) g_free(jumps) ;
+    code_used = 0 ;
+
+    jumps = g_malloc0(zero->ncells * sizeof(*jumps)) ;
+
+    dasm_State *d ;
+    |.section code
+    dasm_init(&d, DASM_MAXSECTION);
+    |.globals lbl_
+    void* labels[lbl__MAX];
+    dasm_setupglobal(&d, labels, lbl__MAX) ;
+    |.actionlist actions
+    dasm_setup(&d, actions);
+    dasm_State** Dst = &d;
+
+    |.code
+
+    |->um_enter:
+    | push rbx
+    | sub rsp, 8
+    | jmp rdi
+
+    |->um_leave:
+    | add rsp, 8
+    | pop rbx
+    | ret
+
+    dasm_link(&d, &code_used) ;
+    dasm_encode(&d, code) ;
+    um_leave = labels[lbl_um_leave] ;
+    dasm_free(&d) ;
+
+    g_message("reloaded") ;
+}
+
+static void compile(void) {
+    dasm_State *d ;
+    size_t ncode ;
+    size_t i ;
+    size_t n_ops = 0 ;
+    int done = 0 ;
+
+    dasm_init(&d, DASM_MAXSECTION);
+    |.globals lbl_
+    void* labels[lbl__MAX];
+    dasm_setupglobal(&d, labels, lbl__MAX) ;
+    |.actionlist actions
+    dasm_setup(&d, actions);
+
+    dasm_State** Dst = &d;
+    |.code
+
+    for (i = pc; !done; i ++) {
+        g_assert(i < zero->ncells) ;
+        uint32_t ins = zero->cells[i] ;
+
+        if (!(n_ops % 16)) dasm_growpc(&d, n_ops + 16) ;
+        |=>n_ops:
+        n_ops ++ ;
+
+        switch (ins >> 28) {
+            case  0:
+                | mov rax, [C]
+                | or rax, rax
+                | jz >1
+                | mov rax, [B]
+                | mov [A], rax
+                |1:
+                break ;
+            case  1:
+                | mov rdx, [B]
+                | or rdx, rdx
+                | jnz >1
+                | mov rdx, [&zero]
+                |1:
+                #ifndef G_DISABLE_ASSERT
+                | mov rax, [rdx]
+                | cmp rax, 0xdeadfall
+                | je >2
+                | mov esi, [C] // XXX
+                | int3
+                |2:
+                #endif
+                | add rdx, 8
+                | mov rax, [rdx]
+                | cmp [C], rax
+                | jb >3
+                | mov esi, 0xf002
+                | int3
+                |3:
+                | add rdx, 8
+                | mov rax, [C]
+                | shl rax, 3
+                | add rdx, rax
+
+                | // arrayref [B], [C]
+                | mov rax, [rdx]
+                | mov [A], rax
+                break ;
+            case  2:
+                | mov rdx, [A]
+                | or rdx, rdx
+                | jnz >1
+                | mov rdx, [&zero]
+                |1:
+                #ifndef G_DISABLE_ASSERT
+                | mov rax, [rdx]
+                | cmp rax, 0xdeadfall
+                | je >2
+                | mov esi, [B] // XXX
+                | int3
+                |2:
+                #endif
+                | add rdx, 8
+                | mov rax, [rdx]
+                | cmp [B], rax
+                | jb >3
+                | mov esi, 0xf002
+                | int3
+                |3:
+                | add rdx, 8
+                | mov rax, [B]
+                | shl rax, 3
+                | add rdx, rax
+
+                | // arrayref [A], [B]
+                | mov rax, [C]
+                | mov [rdx], rax
+
+                | mov rax, [A]
+                | or rax, rax
+                | jnz >1
+                | mov rax, [B]
+                | mov rsi, &&jumps
+                | mov rsi, [rsi]
+                | mov rdx, rax
+                | shl rdx, 3
+                | add rdx, rsi
+                | mov rdx, [rdx]
+                | or rdx, rdx
+                | jz >1
+                | mov aword [&pc], i + 1
+                | mov [&hint], rax
+                | mov rax, 2    // self-modifying code, return 2
+                | jmp aword [&um_leave]
+                |1:
+                break ;
+            case  3:
+                | xor rax, rax
+                | mov eax, [C]
+                | add eax, [B]
+                | mov [A], rax
+                break ;
+            case  4:
+                | xor rax, rax
+                | mov eax, [C]
+                | mul dword [B]
+                | mov [A], rax
+                break ;
+            case  5:
+                | xor rax, rax
+                | mov eax, [B]
+                | xor rdx, rdx
+                | div dword [C]
+                | mov [A], rax
+                break ;
+            case  6:
+                | xor rax, rax
+                | mov eax, [C]
+                | and eax, [B]
+                | not eax
+                | mov [A], rax
+                break ;
+            case  7:
+                | mov aword [&pc], i
+                | xor rax, rax  // HALT: return 0
+                | jmp aword [&um_leave]
+                done = 1 ;
+                break ;
+            case  8:
+                | mov rdi, [C]
+                | mov rax, &array_alloc
+                | call rax
+                | mov [B], rax
+                break ;
+            case  9:
+                | mov rdi, [C]
+                | mov rax, &array_free
+                | call rax
+                break ;
+            case 10:
+                | xor rax, rax
+                | mov al, [C]
+                | mov rdi, rax
+                | mov rax, &fputc1
+                | call rax
+                break ;
+            case 11:
+                | mov rax, &vm_fgetc
+                | call rax
+                | mov [C], rax
+                break ;
+            case 12:
+                | mov rax, [B]
+                | mov rdx, [C]
+                | or rax, rax
+                | jnz >1
+                | mov rsi, &&jumps
+                | mov rsi, [rsi]
+                | mov rax, rdx
+                | shl rax, 3
+                | add rax, rsi
+                | mov rax, [rax]
+                | or rax, rax
+                | jz >1
+                | jmp rax
+                |1:
+                | mov [&hint], rax
+                | mov aword [&pc], rdx
+                | mov rax, 1    // unhandled loadprog: return 1
+                | jmp aword [&um_leave]
+                done = 1 ;
+                break ;
+            case 13:
+                | mov qword [X], (ins & 0x1ffffff)
+                break ;
+            default:
+                DIE("unknown instruction %x", ins) ;
+        }
+    }
+
+    | mov esi, 0xf004
+    | int3
+
+    dasm_link(&d, &ncode) ;
+    dasm_encode(&d, code + code_used) ;
+
+    if (ncode + code_used > MAXCODE) DIE("out of MAXCODE") ;
+
+    for (i = 0; i < n_ops; i ++) {
+        jumps[pc + i] = (char *)code + code_used + dasm_getpclabel(&d, i) ;
+        // printf("%d %p\n", pc + i, jumps[pc + i]) ;
+    }
+
+    // g_message("compiled %u ops, %u bytes", n_ops, ncode) ;
+
+    code_used += ncode ;
+
+    dasm_free(&d) ;
+}
+
+int main(int ac, const char *av[]) {
+    if (ac != 2) DIE("usage: %s <program.um>", *av) ;
+
+    load_file(av[1]) ;
+
+    code = mmap(0, MAXCODE, PROT_EXEC | PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) ;
+
+    if (code == MAP_FAILED) DIE("map failed") ;
+
+    init_code() ;
+
+    for (;;) {
+        unsigned rv ;
+        g_assert(!jumps[pc]) ;
+        compile() ;
+        g_assert(jumps[pc]) ;
+        rv = (*code)(jumps[pc]) ;
+
+        switch (rv) {
+            case 0:
+                g_message("HALT") ;
+                exit(0) ;
+            case 1:
+                if (hint) {
+                    array_free((pint)zero) ;
+                    struct array *b = (struct array *)hint ;
+                    zero = (struct array *)array_alloc(b->ncells) ;
+                    memcpy(zero->cells, b->cells, b->ncells * sizeof(pint));
+                    init_code() ;
+                }
+                break ;
+            case 2:
+                printf("self-modifying code detected\n") ;
+                init_code() ;
+                break ;
+            default:
+                DIE("unknown return code %u", rv) ;
+        }
+    }
+
+    return 0 ;
+}

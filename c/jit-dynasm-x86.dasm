@@ -1,0 +1,405 @@
+// vim:set ft=c:
+#define G_DISABLE_ASSERT 1
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <stdint.h>
+#include <glib.h>
+
+#include <sys/mman.h>
+
+#include "dynasm/dasm_proto.h"
+#include "dynasm/dasm_x86.h"
+
+#define DIE(...) { g_critical(__VA_ARGS__) ; exit(-1) ; }
+
+struct array {
+    uint32_t magic ;
+    uint32_t ncells ;
+    uint32_t cells[0] ;
+} ;
+
+#define ARRAY(i)    ((i) ? ((struct array *)(i)) : zero)
+
+#define MAXCODE     (1 << 24)
+
+uint32_t r[8] ;
+uint32_t pc ;
+uint32_t hint ;
+struct array *zero ;
+
+void *freelist = NULL ;
+
+uint32_t array_alloc(uint32_t ncells) {
+    struct array *a ;
+    if (ncells == 3 && freelist) {
+        a = (void *)(((char *)freelist) - 8) ;
+        freelist = (void *)a->cells[0] ;
+        memset(a->cells, 0, 3 * sizeof(uint32_t)) ;
+    } else {
+        a = g_malloc0(sizeof(*a) + sizeof(uint32_t) * ncells) ;
+    }
+    a->magic = 0xdeadfall ;
+    a->ncells = ncells ;
+    return (uint32_t)a ;
+}
+
+void array_free(uint32_t i) {
+    g_assert(i) ;
+    struct array *a = (struct array *)i ;
+    if (a->ncells == 3) {
+        a->cells[0] = (uint32_t)freelist ;
+        freelist = ((char *)a) + 8 ;
+        return ;
+    }
+    g_assert(a->magic == 0xdeadfall) ;
+    a->magic = 0 ;
+    g_free(a) ;
+}
+
+#define C   (r + (ins & 7))
+#define B   (r + ((ins >> 3) & 7))
+#define A   (r + ((ins >> 6) & 7))
+#define X   (r + ((ins >> 25) & 7))
+
+int (*code)(void *p) ;
+void **jumps ;
+size_t code_used ;
+void *um_leave ;
+
+| .if X86
+  | .arch x86
+
+  |.macro prologue
+    | push ebx
+    | mov eax, code
+    | add eax, [esp + 4]
+  |.endmacro
+
+  |.macro epilogue
+    | mov esi, 0xf003
+    | int 3
+    |->um_return:
+    | pop ebx
+    | ret
+  |.endmacro
+
+  |.macro arrayref, arr, ind
+    | mov edx, arr
+    | or edx, edx
+    | jnz >1
+    | mov edx, [&zero]
+    |1:
+    | mov eax, [edx]
+    | cmp eax, 0xdeadfall
+    | je >2
+    | mov esi, ind // XXX
+    | int 3
+    |2:
+    | add edx, 4
+    | mov eax, [edx]
+    | cmp ind, eax
+    | jb >3
+    | mov esi, 0xf002
+    | int 3
+    |3:
+    | add edx, 4
+    | mov eax, ind
+    | shl eax, 2
+    | add edx, eax
+  |.endmacro
+| .endif
+
+static void init_code(void) {
+    if (jumps) g_free(jumps) ;
+    code_used = 0 ;
+
+    jumps = g_malloc0(zero->ncells * sizeof(*jumps)) ;
+
+    dasm_State *d ;
+    |.section code
+    dasm_init(&d, DASM_MAXSECTION);
+    |.globals lbl_
+    void* labels[lbl__MAX];
+    dasm_setupglobal(&d, labels, lbl__MAX) ;
+    |.actionlist actions
+    dasm_setup(&d, actions);
+    dasm_State** Dst = &d;
+
+    |.code
+
+    |->um_enter:
+    | mov eax, [esp + 4]
+    | push ebx
+    | jmp eax
+
+    |->um_leave:
+    | pop ebx
+    | ret
+
+    dasm_link(&d, &code_used) ;
+    dasm_encode(&d, code) ;
+    um_leave = labels[lbl_um_leave] ;
+    dasm_free(&d) ;
+
+    g_message("reloaded") ;
+}
+
+static void compile(void) {
+    dasm_State *d ;
+    size_t ncode ;
+    size_t i ;
+    size_t n_ops = 0 ;
+    int done = 0 ;
+
+    dasm_init(&d, DASM_MAXSECTION);
+    |.globals lbl_
+    void* labels[lbl__MAX];
+    dasm_setupglobal(&d, labels, lbl__MAX) ;
+    |.actionlist actions
+    dasm_setup(&d, actions);
+
+    dasm_State** Dst = &d;
+    |.code
+
+    for (i = pc; !done; i ++) {
+        g_assert(i < zero->ncells) ;
+        uint32_t ins = zero->cells[i] ;
+
+        if (!(n_ops % 16)) dasm_growpc(&d, n_ops + 16) ;
+        |=>n_ops:
+        n_ops ++ ;
+
+        switch (ins >> 28) {
+            case  0:
+                | mov eax, [C]
+                | or eax, eax
+                | jz >1
+                | mov eax, [B]
+                | mov [A], eax
+                |1:
+                break ;
+            case  1:
+                | mov edx, [B]
+                | or edx, edx
+                | jnz >1
+                | mov edx, [&zero]
+                |1:
+                | mov eax, [edx]
+                | cmp eax, 0xdeadfall
+                | je >2
+                | mov esi, [C] // XXX
+                | int 3
+                |2:
+                | add edx, 4
+                | mov eax, [edx]
+                | cmp [C], eax
+                | jb >3
+                | mov esi, 0xf002
+                | int 3
+                |3:
+                | add edx, 4
+                | mov eax, [C]
+                | shl eax, 2
+                | add edx, eax
+
+                | // arrayref [B], [C]
+                | mov eax, [edx]
+                | mov [A], eax
+                break ;
+            case  2:
+                | mov edx, [A]
+                | or edx, edx
+                | jnz >1
+                | mov edx, [&zero]
+                |1:
+                | mov eax, [edx]
+                | cmp eax, 0xdeadfall
+                | je >2
+                | mov esi, [B] // XXX
+                | int 3
+                |2:
+                | add edx, 4
+                | mov eax, [edx]
+                | cmp [B], eax
+                | jb >3
+                | mov esi, 0xf002
+                | int 3
+                |3:
+                | add edx, 4
+                | mov eax, [B]
+                | shl eax, 2
+                | add edx, eax
+
+                | // arrayref [A], [B]
+                | mov eax, [C]
+                | mov [edx], eax
+
+                | mov eax, [A]
+                | or eax, eax
+                | jnz >1
+                | mov eax, [B]
+                | mov edx, [eax * 4 + jumps]
+                | or edx, edx
+                | jz >1
+                | mov aword [&pc], i + 1
+                | mov [&hint], eax
+                | mov eax, 2    // self-modifying code, return 2
+                | jmp aword [&um_leave]
+                |1:
+                break ;
+            case  3:
+                | mov eax, [C]
+                | add eax, [B]
+                | mov [A], eax
+                break ;
+            case  4:
+                | mov eax, [C]
+                | mul dword [B]
+                | mov [A], eax
+                break ;
+            case  5:
+                | mov eax, [B]
+                | xor edx, edx
+                | div dword [C]
+                | mov [A], eax
+                break ;
+            case  6:
+                | mov eax, [C]
+                | and eax, [B]
+                | not eax
+                | mov [A], eax
+                break ;
+            case  7:
+                | mov aword [&pc], i
+                | xor eax, eax  // HALT: return 0
+                | jmp aword [&um_leave]
+                done = 1 ;
+                break ;
+            case  8:
+                | push dword [C]
+                | call &array_alloc
+                | add esp, 4
+                | mov [B], eax
+                break ;
+            case  9:
+                | push dword [C]
+                | call &array_free
+                | add esp, 4
+                break ;
+            case 10:
+                | push aword stdout
+                | xor eax, eax
+                | mov al, [C]
+                | push eax
+                | call &fputc
+                | add esp, 8
+                break ;
+            case 11:
+                | push aword stdin
+                | call &fgetc
+                | add esp, 4
+                | mov [C], eax
+                break ;
+            case 12:
+                | mov eax, [B]
+                | mov edx, [C]
+                | or eax, eax
+                | jnz >1
+                | mov eax, [edx * 4 + jumps]
+                | or eax, eax
+                | jz >1
+                | jmp eax
+                |1:
+                | mov [&hint], eax
+                | mov aword [&pc], edx
+                | mov eax, 1    // unhandled loadprog: return 1
+                | jmp aword [&um_leave]
+                done = 1 ;
+                break ;
+            case 13:
+                | mov dword [X], (ins & 0x1ffffff)
+                break ;
+            default:
+                DIE("unknown instruction %x", ins) ;
+        }
+    }
+
+    | mov esi, 0xf004
+    | int 3
+
+    dasm_link(&d, &ncode) ;
+    dasm_encode(&d, code + code_used) ;
+
+    if (ncode + code_used > MAXCODE) DIE("out of MAXCODE") ;
+
+    for (i = 0; i < n_ops; i ++) {
+        jumps[pc + i] = (char *)code + code_used + dasm_getpclabel(&d, i) ;
+        // printf("%d %p\n", pc + i, jumps[pc + i]) ;
+    }
+
+    // g_message("compiled %u ops, %u bytes", n_ops, ncode) ;
+
+    code_used += ncode ;
+
+    dasm_free(&d) ;
+}
+
+int main(int ac, const char *av[]) {
+    gsize fsize, i ;
+    uint32_t *fcontent ;
+    GError *err = NULL ;
+
+    if (ac != 2) DIE("usage: %s <program.um>", *av) ;
+
+    if (!g_file_get_contents(av[1], (gchar **)&fcontent, &fsize, &err))
+        DIE("reading `%s': %s", av[1], err->message) ;
+
+    if (fsize % 4) DIE("weird program size: %u bytes", fsize) ;
+    fsize /= 4 ;
+
+    zero = (struct array *)array_alloc(fsize) ;
+
+    for (i = 0; i < fsize; i ++) zero->cells[i] = g_ntohl(fcontent[i]) ;
+
+    g_message("%u dwords loaded", fsize) ;
+
+    code = mmap(0, MAXCODE, PROT_EXEC | PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0) ;
+
+    if (code == MAP_FAILED) DIE("map failed") ;
+
+    init_code() ;
+
+    for (;;) {
+        int rv ;
+        g_assert(!jumps[pc]) ;
+        compile() ;
+        g_assert(jumps[pc]) ;
+        rv = (*code)(jumps[pc]) ;
+
+        switch (rv) {
+            case 0:
+                g_message("HALT") ;
+                exit(0) ;
+            case 1:
+                if (hint) {
+                    array_free((uint32_t)zero) ;
+                    struct array *b = (struct array *)hint ;
+                    zero = (struct array *)array_alloc(b->ncells) ;
+                    memcpy(zero->cells, b->cells, b->ncells * sizeof(uint32_t));
+                    init_code() ;
+                }
+                break ;
+            case 2:
+                printf("self-modifying code detected\n") ;
+                init_code() ;
+                break ;
+            default:
+                DIE("unknown return code %d", rv) ;
+        }
+    }
+
+    return 0 ;
+}
