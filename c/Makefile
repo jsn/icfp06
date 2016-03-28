@@ -1,12 +1,12 @@
 
 LDFLAGS = $(shell pkg-config --libs glib-2.0) -L/usr/local/lib \
 	  -O3
-CFLAGS	= $(shell pkg-config --cflags glib-2.0) -I/usr/local/include -Wall \
-	  -O3 -fomit-frame-pointer
+CFLAGS	= $(shell pkg-config --cflags glib-2.0) -I. -I/usr/local/include -Wall \
+	  -O3 -DNDEBUG -fomit-frame-pointer
 CC	= gcc
 LD	= gcc
 
-OBJS	= switch.o goto.o
+OBJS	= switch.o goto.o dasm-x64.o lightn.o
 COMMON	= common.o
 
 all: switch goto
@@ -22,11 +22,11 @@ goto:	goto.o $(COMMON) common.h
 switch:	switch.o $(COMMON) common.h
 	$(LD) -o $@ $< $(COMMON) $(LDFLAGS)
 
-dasm-x64:	dasm-x64.c $(COMMON) common.h
-	$(CC) -I. -o dasm-x64 dasm-x64.c $(CFLAGS) $(COMMON) $(LDFLAGS)
+dasm-x64:	dasm-x64.o $(COMMON) common.h
+	$(LD) -o $@ $< $(COMMON) $(LDFLAGS)
 
 dasm-x64.c: dasm-x64.dasm
 	luajit dynasm/dynasm.lua -D X64 -o dasm-x64.c dasm-x64.dasm
 
-lightn:	lightn.c $(COMMON) common.h
-	$(CC) -o $@ $< $(CFLAGS) $(COMMON) $(LDFLAGS) -llightning -ldl
+lightn:	lightn.o $(COMMON) common.h
+	$(LD) -o $@ $< $(COMMON) $(LDFLAGS) -llightning -ldl

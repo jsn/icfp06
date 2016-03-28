@@ -1,9 +1,8 @@
-#define G_DISABLE_ASSERT 1
+#include "common.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "common.h"
 
 #define C   r[ins & 7]
 #define B   r[(ins >> 3) & 7]

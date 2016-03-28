@@ -1,6 +1,10 @@
 #ifndef __VM_H__
 #define __VM_H__
 
+#ifdef NDEBUG
+#define G_DISABLE_ASSERT 1
+#endif
+
 #include <stdint.h>
 #include <glib.h>
 
