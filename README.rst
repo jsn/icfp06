@@ -1,11 +1,12 @@
 My collection of VMs for ICFP 2006
 ==================================
 
-A small collection of VM implementations. Currently there are 5 VMs:
+A small collection of VM implementations. Currently there are 6 VMs:
 
   * 2 interpreters written in C,
   * 2 JIT implementations (also in C),
-  * and 1 (interpreter) written in golang.
+  * 1 (interpreter) written in golang,
+  * and 1 (interpreter) written in nim.
 
 See http://www.boundvariable.org/ for more details about the VM.
 VM images (``codex.umz`` and ``sandmark.umz``) are available there.
@@ -69,6 +70,13 @@ go/switch/switch.go
     translate ``goto.c`` to Go too, might improve the performance by I 
     don't know, 10%? Quite a tedious task though, since there are no macros 
     in Go.
+
+nim/switch.nim
+    Takes **40 seconds** to run the ``sandmark``. Also a translation of
+    ``switch.c``. Nim documentation mentions a pragma 
+    (``{.computedGoto.}``) that is specifically designed to optimize
+    switch VM dispatch wrt branch predictions, and it actually works (but 
+    you can't use e.g. ``continue`` in your switch).
 
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html
