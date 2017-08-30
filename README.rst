@@ -65,11 +65,16 @@ Other VMs
 ---------
 
 go/switch/switch.go
-    Takes **46 seconds** to run the ``sandmark``. Basically a translation 
-    of ``switch.c``, a very naive implementation. It should be possible to 
-    translate ``goto.c`` to Go too, might improve the performance by I 
-    don't know, 10%? Quite a tedious task though, since there are no macros 
-    in Go.
+    Takes **30 seconds** (was: **46 seconds**) to run the ``sandmark``.  
+    Basically a translation of ``switch.c``, a very naive implementation.  
+    It should be possible to translate ``goto.c`` to Go too, might improve 
+    the performance by I don't know, 10%? Quite a tedious task though, 
+    since there are no macros in Go.
+
+    **Update**: Apparently, when I got rid of ``continue`` in ``switch.go`` 
+    dispatch, the optimizer managed to use computed goto for dispatch, or 
+    something. The benchmark now takes 30 seconds instead of 46. Almost as 
+    fast as C, very impressive.
 
 nim/switch.nim
     Takes **40 seconds** to run the ``sandmark``. Also a translation of

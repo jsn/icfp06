@@ -116,8 +116,7 @@ func main() {
                 arrays[0] = make(array, len(ba))
                 copy(arrays[0], ba)
             }
-            pc = *c
-            continue
+            pc = *c - 1
         case 13:
             r[(ins >> 25) & 7] = ins & 0x1ffffff
         default:
