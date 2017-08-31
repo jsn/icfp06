@@ -91,9 +91,11 @@ proc main() =
         var b = [uint8 0]
         let read = stdin.readBytes(b, 0, 1)
 
-        if read == 0:
-          b[0] = 255
-        C = Pint b[0]
+        C =
+          if read == 0:
+            not Pint 0
+          else:
+            b[0]
       of 12:
         if B != 0:
           arrays[0][] = arrays[int B][]
