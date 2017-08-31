@@ -77,11 +77,14 @@ go/switch/switch.go
     fast as C, very impressive.
 
 nim/switch.nim
-    Takes **40 seconds** to run the ``sandmark``. Also a translation of
+    Takes **30 seconds** to run the ``sandmark``. Also a translation of
     ``switch.c``. Nim documentation mentions a pragma 
     (``{.computedGoto.}``) that is specifically designed to optimize
     switch VM dispatch wrt branch predictions, and it actually works (but 
     you can't use e.g. ``continue`` in your switch).
+
+    **Update**: With cached zero array it's also almost as fast as C
+    (was 40 seconds without this optimization).
 
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html

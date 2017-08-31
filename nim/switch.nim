@@ -2,7 +2,7 @@ import os, streams, sequtils, posix
 
 type
   Pint = uint32
-  Array = seq[Pint]
+  Array = ref seq[Pint]
 
 proc die(s: string) =
   echo s
@@ -13,7 +13,9 @@ var free: seq[Pint] = @[]
 var n_arrays: Pint = 0
 
 proc allocArray(size: int): Pint =
-  let x = repeat(Pint 0, size)
+  var x: Array
+  x.new
+  x[] = repeat(Pint 0, size)
   if free.len == 0:
     let a = n_arrays
     arrays &= x
@@ -39,9 +41,8 @@ proc loadFile(fname: string): Pint =
   if newFileStream(fname).readData(addr arrays[int a][0], fs) != fs:
     die "short read"
 
-  for p in arrays[int a].mitems: p = ntohl p
+  for p in arrays[int a][].mitems: p = ntohl p
   return a
-
 
 proc main() =
   let argv = commandLineParams()
@@ -51,6 +52,7 @@ proc main() =
   doAssert loadFile(argv[0]) == 0
   var pc = Pint 0
   var r: array[Pint 8, Pint]
+  var zero: Array = arrays[0]
 
   template C(): untyped = r[ins and 7]
   template B(): untyped = r[(ins shr 3) and 7]
@@ -59,7 +61,7 @@ proc main() =
 
   while true:
     {.computedGoto.}
-    var ins = arrays[0][int pc]
+    var ins = zero[int pc]
 
     case (ins shr 28) and 15:
       of 0:
@@ -94,7 +96,8 @@ proc main() =
         C = Pint b[0]
       of 12:
         if B != 0:
-          arrays[int 0] = arrays[int B]
+          arrays[0][] = arrays[int B][]
+          zero = arrays[0]
         pc = C - 1
       of 13:
         A2 = Pint(ins and 0x1ffffff)
