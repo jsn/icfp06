@@ -2,20 +2,20 @@ import os, streams, sequtils, posix
 
 type
   Pint = uint32
-  Array = ref seq[Pint]
+  Array = seq[Pint]
 
 proc die(s: string) =
   echo s
   quit -1
 
-var arrays: seq[Array] = @[]
-var free: seq[Pint] = @[]
-var n_arrays: Pint = 0
+var arrays: seq[ref[Array]] = @[]
+var free: Array = @[]
+var n_arrays = Pint 0
 
 proc allocArray(size: int): Pint =
-  var x: Array
-  x.new
+  let x = new Array
   x[] = repeat(Pint 0, size)
+
   if free.len == 0:
     let a = n_arrays
     arrays &= x
@@ -52,7 +52,7 @@ proc main() =
   doAssert loadFile(argv[0]) == 0
   var pc = Pint 0
   var r: array[Pint 8, Pint]
-  var zero: Array = arrays[0]
+  var zero = arrays[0]
 
   template C(): untyped = r[ins and 7]
   template B(): untyped = r[(ins shr 3) and 7]
@@ -84,7 +84,7 @@ proc main() =
       of 8:
         B = allocArray(int C)
       of 9:
-        freeArray(C)
+        freeArray C
       of 10:
         doAssert stdout.writeBytes([uint8 C], 0, 1) == 1
       of 11:
