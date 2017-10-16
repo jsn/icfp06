@@ -10,17 +10,14 @@ proc die(s: string) =
 
 var arrays: seq[ref[Array]] = @[]
 var free: Array = @[]
-var n_arrays = Pint 0
 
 proc allocArray(size: int): Pint =
   let x = new Array
   x[] = repeat(Pint 0, size)
 
   if free.len == 0:
-    let a = n_arrays
     arrays &= x
-    n_arrays += 1
-    return a
+    return Pint arrays.high
 
   let a = free.pop
   assert arrays[int a] == nil
