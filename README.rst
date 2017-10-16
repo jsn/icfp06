@@ -1,12 +1,13 @@
 My collection of VMs for ICFP 2006
 ==================================
 
-A small collection of VM implementations. Currently there are 6 VMs:
+A small collection of VM implementations. Currently there are 7 VMs:
 
   * 2 interpreters written in C,
   * 2 JIT implementations (also in C),
   * 1 (interpreter) written in golang,
-  * and 1 (interpreter) written in nim.
+  * 1 (interpreter) written in Nim_,
+  * and 1 (interpreter) written in Crystal_
 
 See http://www.boundvariable.org/ for more details about the VM.
 VM images (``codex.umz`` and ``sandmark.umz``) are available there.
@@ -66,10 +67,10 @@ Other VMs
 
 go/switch/switch.go
     Takes **30 seconds** (was: **46 seconds**) to run the ``sandmark``.  
-    Basically a translation of ``switch.c``, a very naive implementation.  
-    It should be possible to translate ``goto.c`` to Go too, might improve 
-    the performance by I don't know, 10%? Quite a tedious task though, 
-    since there are no macros in Go.
+    Basically a translation of ``switch.c`` to golang, a very naive 
+    implementation.  It should be possible to translate ``goto.c`` to Go 
+    too, might improve the performance by I don't know, 10%? Quite a 
+    tedious task though, since there are no macros in Go.
 
     **Update**: Apparently, when I got rid of ``continue`` in ``switch.go`` 
     dispatch, the optimizer managed to use computed goto for dispatch, or 
@@ -78,7 +79,7 @@ go/switch/switch.go
 
 nim/switch.nim
     Takes **30 seconds** to run the ``sandmark``. Also a translation of
-    ``switch.c``. Nim documentation mentions a pragma 
+    ``switch.c``, to Nim. Nim documentation mentions a pragma 
     (``{.computedGoto.}``) that is specifically designed to optimize
     switch VM dispatch wrt branch predictions, and it actually works (but 
     you can't use e.g. ``continue`` in your switch).
@@ -86,5 +87,13 @@ nim/switch.nim
     **Update**: With cached zero array it's also almost as fast as C
     (was 40 seconds without this optimization).
 
+crystal/switch.cr
+    Takes **47 seconds** to run the ``sandmark``. Also a translation of
+    ``switch.c``, to Crystal. Shortest source code so far. That's actually 
+    pretty fast, since that's supposedly a naive switch dispatch, very 
+    unfriendly to branch predictor, no computed gotos, nothing.
+
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html
+.. _Nim: https://nim-lang.org/
+.. _Crystal: https://crystal-lang.org/
