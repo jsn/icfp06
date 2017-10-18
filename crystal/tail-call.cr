@@ -16,12 +16,6 @@ private macro b; (ins >> 3) & 7; end
 private macro a; (ins >> 6) & 7; end
 private macro a2; (ins >> 25) & 7; end
 
-private macro declare_ops
-  {% for i in 0 .. 13 %}
-    op{{i}} = -> (ins : UInt32, pc : UInt32) {}
-  {% end %}
-end
-
 private macro next_op()
   case (ins >> 28) & 15
   {% for i in 0 .. 13 %}
@@ -33,10 +27,10 @@ private macro next_op()
   end
 end
 
-private macro def_op(n)
+private macro def_op(n, nxt = pc + 1)
   op{{n}} = -> (ins : UInt32, pc : UInt32) {
     {{yield}}
-    pc += 1
+    pc = {{nxt}}
     ins = zero[pc]
     next_op
   }
@@ -55,7 +49,9 @@ def main
   zero : Array(UInt32) = load_file ARGV[0]
   arrays << zero
 
-  declare_ops
+  {% for i in 0 .. 13 %}
+    op{{i}} = -> (ins : UInt32, pc : UInt32) {}
+  {% end %}
 
   def_op 0 { r[a] = r[b] if r[c] != 0 }
 
@@ -101,14 +97,9 @@ def main
     r[c] = x.is_a?(UInt8) ? x.to_u32 : ~0_u32
   end
 
-  def_op 12 do
-    arrays[0] = zero = arrays[r[b]].clone if r[b] != 0
-    pc = r[c] - 1
-  end
+  def_op 12, r[c] { arrays[0] = zero = arrays[r[b]].clone if r[b] != 0 }
 
-  def_op 13 do
-    r[a2] = ins & 0x1ffffff
-  end
+  def_op 13 { r[a2] = ins & 0x1ffffff }
 
   pc = 0_u32
   ins = zero[pc]
