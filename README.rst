@@ -1,13 +1,13 @@
 My collection of VMs for ICFP 2006
 ==================================
 
-A small collection of VM implementations. Currently there are 7 VMs:
+A small collection of VM implementations. Currently there are 8 VMs:
 
   * 2 interpreters written in C,
   * 2 JIT implementations (also in C),
   * 1 (interpreter) written in golang,
   * 1 (interpreter) written in Nim_,
-  * and 1 (interpreter) written in Crystal_
+  * and 2 (interpreters) written in Crystal_
 
 See http://www.boundvariable.org/ for more details about the VM.
 VM images (``codex.umz`` and ``sandmark.umz``) are available there.
@@ -92,6 +92,13 @@ crystal/switch.cr
     ``switch.c``, to Crystal. Shortest source code so far. That's actually 
     pretty fast, since that's supposedly a naive switch dispatch, very 
     unfriendly to branch predictor, no computed gotos, nothing.
+
+crystal/tail-call.cr
+    Takes **40 seconds** to run the ``sandmark``. The idea is to use tail
+    call elimination optimization (which Crystal does when compiled in 
+    ``--release`` mode) for dispatch instead of switch. This way we can 
+    give the branch predictor something to work with. Variables access is a 
+    bit tricky in this case, hence the use of closures for ops.
 
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html
