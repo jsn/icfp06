@@ -66,11 +66,11 @@ Other VMs
 ---------
 
 go/switch/switch.go
-    Takes **30 seconds** (was: **46 seconds**) to run the ``sandmark``.  
-    Basically a translation of ``switch.c`` to golang, a very naive 
-    implementation.  It should be possible to translate ``goto.c`` to Go 
-    too, might improve the performance by I don't know, 10%? Quite a 
-    tedious task though, since there are no macros in Go.
+    Takes **30 seconds** (was: **46 seconds**) to run the ``sandmark``, 
+    with GOMAXPROCS=1. Basically a translation of ``switch.c`` to golang, a 
+    very naive implementation.  It should be possible to translate 
+    ``goto.c`` to Go too, might improve the performance by I don't know, 
+    10%? Quite a tedious task though, since there are no macros in Go.
 
     **Update**: Apparently, when I got rid of ``continue`` in ``switch.go`` 
     dispatch, the optimizer managed to use computed goto for dispatch, or 
@@ -88,17 +88,19 @@ nim/switch.nim
     (was 40 seconds without this optimization).
 
 crystal/switch.cr
-    Takes **47 seconds** to run the ``sandmark``. Also a translation of
-    ``switch.c``, to Crystal. Shortest source code so far. That's actually 
-    pretty fast, since that's supposedly a naive switch dispatch, very 
-    unfriendly to branch predictor, no computed gotos, nothing.
+    Takes **39 seconds** to run the ``sandmark``, run with GC_MARKERS=1. 
+    Also a translation of ``switch.c``, to Crystal. Shortest source code so 
+    far.  That's actually pretty fast, since that's supposedly a naive 
+    switch dispatch, very unfriendly to branch predictor, no computed 
+    gotos, nothing.
 
 crystal/tail-call.cr
-    Takes **40 seconds** to run the ``sandmark``. The idea is to use tail
-    call elimination optimization (which Crystal does when compiled in 
-    ``--release`` mode) for dispatch instead of switch. This way we can 
-    give the branch predictor something to work with. Variables access is a 
-    bit tricky in this case, hence the use of closures for ops.
+    Takes **36 seconds** to run the ``sandmark``, run with GC_MARKERS=1.  
+    The idea is to use tail call elimination optimization (which Crystal 
+    does when compiled in ``--release`` mode) for dispatch instead of 
+    switch. This way we can give the branch predictor something to work 
+    with. Variables access is a bit tricky in this case, hence the use of 
+    closures for ops.
 
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html
