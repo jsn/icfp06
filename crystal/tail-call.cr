@@ -39,7 +39,7 @@ end
 def main
   arrays = [] of Array(UInt32)
   free = [] of UInt32
-  r = Array(UInt32).new 8, 0_u32
+  r = StaticArray(UInt32, 8).new 0_u32
 
   if ARGV.empty?
     STDERR.puts "usage: #{$0} <file.um>"

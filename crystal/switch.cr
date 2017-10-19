@@ -29,7 +29,7 @@ def main
   arrays << zero
 
   pc = 0_u32
-  r = Array.new 8, 0_u32
+  r = StaticArray(UInt32, 8).new 0_u32
 
   loop do
     ins = zero[pc]
