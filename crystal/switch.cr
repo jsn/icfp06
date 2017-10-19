@@ -70,7 +70,7 @@ def main
     when 11
       STDOUT.flush
       x = STDIN.read_byte
-      r[c] = x.is_a?(UInt8) ? x.to_u32 : ~0_u32
+      r[c] = x ? x.to_u32 : ~0_u32
     when 12
       arrays[0] = zero = arrays[r[b]].clone if r[b] != 0
       pc = r[c] - 1

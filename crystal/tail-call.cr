@@ -16,7 +16,9 @@ private macro b; (ins >> 3) & 7; end
 private macro a; (ins >> 6) & 7; end
 private macro a2; (ins >> 25) & 7; end
 
-private macro next_op()
+private macro next_op(nxt)
+  pc = {{nxt}}
+  ins = zero[pc]
   case (ins >> 28) & 15
   {% for i in 0 .. 13 %}
   when {{i}}
@@ -30,9 +32,7 @@ end
 private macro def_op(n, nxt = pc + 1)
   op{{n}} = -> (ins : UInt32, pc : UInt32) {
     {{yield}}
-    pc = {{nxt}}
-    ins = zero[pc]
-    next_op
+    next_op {{nxt}}
   }
 end
 
@@ -68,8 +68,8 @@ def main
   def_op 6 { r[a] = ~(r[b] & r[c]) }
 
   def_op 7 do
-      puts "HALT"
-      return
+    puts "HALT"
+    return
   end
 
   def_op 8 do
@@ -94,16 +94,14 @@ def main
   def_op 11 do
     STDOUT.flush
     x = STDIN.read_byte
-    r[c] = x.is_a?(UInt8) ? x.to_u32 : ~0_u32
+    r[c] = x ? x.to_u32 : ~0_u32
   end
 
   def_op 12, r[c] { arrays[0] = zero = arrays[r[b]].clone if r[b] != 0 }
 
   def_op 13 { r[a2] = ins & 0x1ffffff }
 
-  pc = 0_u32
-  ins = zero[pc]
-  next_op
+  next_op 0_u32
 end
 
 {% if ! flag? :release %}
