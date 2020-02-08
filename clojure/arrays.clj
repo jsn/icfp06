@@ -56,7 +56,7 @@
                   (do
                     (vswap! arrays assoc! ai a)
                     (vswap! free pop)
-                    (B ai))
+                    (B (int ai)))
                   (do
                     (B (count @arrays))
                     (vswap! arrays conj! a)))))
