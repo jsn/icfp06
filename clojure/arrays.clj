@@ -33,17 +33,17 @@
 (defmacro with-next [& body] `(do ~@body (recur (inc ~'pc))))
 
 (defn run [code]
-  (let [arrays (volatile! (transient [code]))
+  (let [arrays (transient [code])
         free (volatile! '())
         r (mk-array 8)]
     (loop [pc (int 0)]
-      (let [ins (aget ^ints (@arrays 0) pc)
+      (let [ins (aget ^ints (arrays 0) pc)
             op (bit-and (bit-shift-right ins 28) 15)]
         ; (printf "%3d %d %d %d %d %d\n" pc op (A) (B) (C) (X))
         (case op
           0 (with-next (if (zero? (C)) r (A (B))))
-          1 (with-next (A (aget ^ints (@arrays (B)) (C))))
-          2 (with-next (aset ^ints(@arrays (A)) (B) (C)))
+          1 (with-next (A (aget ^ints (arrays (B)) (C))))
+          2 (with-next (aset ^ints(arrays (A)) (B) (C)))
           3 (with-next (A (unchecked-add-int (B) (C))))
           4 (with-next (A (unchecked-multiply-int (B) (C))))
           5 (with-next (A (Integer/divideUnsigned (B) (C))))
@@ -54,17 +54,17 @@
                     a (mk-array c)]
                 (if-let [ai (and (= c 3) (peek @free))]
                   (do
-                    (vswap! arrays assoc! ai a)
+                    (assoc! arrays ai a)
                     (vswap! free pop)
                     (B (int ai)))
                   (do
-                    (B (count @arrays))
-                    (vswap! arrays conj! a)))))
+                    (B (count arrays))
+                    (conj! arrays a)))))
           9 (with-next
               (let [c (C)
-                    len (alength ^ints (@arrays c))]
-                (vswap! arrays assoc! (C) nil)
-                (when (= 3 (count (@arrays c)))
+                    len (alength ^ints (arrays c))]
+                (assoc! arrays (C) nil)
+                (when (= 3 (count (arrays c)))
                   (vswap! free conj c))))
           10 (with-next
                (let [c (char (C))]
@@ -75,7 +75,7 @@
                (C (int (.read ^java.io.BufferedReader *in*))))
           12 (do
                (when-not (zero? (B))
-                 (vswap! arrays assoc! 0 (aclone ^ints (@arrays (B)))))
+                 (assoc! arrays 0 (aclone ^ints (arrays (B)))))
                (recur (C)))
           13 (with-next (X (int (bit-and ins 0x1ffffff))))
           (throw (ex-info "unknown opcode" {:opcode ins}))))
