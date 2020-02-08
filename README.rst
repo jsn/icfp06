@@ -1,14 +1,14 @@
 My collection of VMs for ICFP 2006
 ==================================
 
-A small collection of VM implementations. Currently there are 9 VMs:
+A small collection of VM implementations. Currently there are 10 VMs:
 
   * 2 interpreters written in C,
   * 2 JIT implementations (also in C),
   * 1 (interpreter) written in golang,
   * 1 (interpreter) written in Nim_,
   * 2 (interpreters) written in Crystal_
-  * and 1 written in Clojure
+  * and 2 written in Clojure
 
 See http://www.boundvariable.org/ for more details about the VM.
 VM images (``codex.umz`` and ``sandmark.umz``) are available there.
@@ -109,6 +109,12 @@ clojure/naive.clj
     using persistent data structures and ``loop``/``recur`` for emulating 
     assignments. This is about as unwieldy to write as it is slow to 
     execute. So, don't try this at home for low-level bit-crunching stuff.
+
+clojure/arrays.clj
+    Takes **150 seconds** (4min 30sec) to run the ``sandmark``. On the one 
+    hand, it's an order of magnitude improvement over ``naive.clj``. Also, 
+    the source code is less convoluted. On the other hand, that's still 
+    like 5 times slower than naive C (``switch.c``).
 
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html
