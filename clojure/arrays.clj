@@ -33,8 +33,8 @@
 (defmacro with-next [& body] `(do ~@body (recur (inc ~'pc))))
 
 (defn run [code]
-  (let [arrays (volatile! (identity [code]))
-        free (volatile! (identity []))
+  (let [arrays (volatile! (transient [code]))
+        free (volatile! '())
         r (mk-array 8)]
     (loop [pc (int 0)]
       (let [ins (aget ^ints (@arrays 0) pc)
@@ -54,16 +54,16 @@
                     a (mk-array c)]
                 (if-let [ai (and (= c 3) (peek @free))]
                   (do
-                    (vswap! arrays assoc ai a)
+                    (vswap! arrays assoc! ai a)
                     (vswap! free pop)
                     (B ai))
                   (do
                     (B (count @arrays))
-                    (vswap! arrays conj a)))))
+                    (vswap! arrays conj! a)))))
           9 (with-next
               (let [c (C)
                     len (alength ^ints (@arrays c))]
-                (vswap! arrays assoc (C) nil)
+                (vswap! arrays assoc! (C) nil)
                 (when (= 3 (count (@arrays c)))
                   (vswap! free conj c))))
           10 (with-next
@@ -75,7 +75,7 @@
                (C (int (.read ^java.io.BufferedReader *in*))))
           12 (do
                (when-not (zero? (B))
-                 (vswap! arrays assoc 0 (aclone ^ints (@arrays (B)))))
+                 (vswap! arrays assoc! 0 (aclone ^ints (@arrays (B)))))
                (recur (C)))
           13 (with-next (X (int (bit-and ins 0x1ffffff))))
           (throw (ex-info "unknown opcode" {:opcode ins}))))
