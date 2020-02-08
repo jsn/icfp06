@@ -1,13 +1,14 @@
 My collection of VMs for ICFP 2006
 ==================================
 
-A small collection of VM implementations. Currently there are 8 VMs:
+A small collection of VM implementations. Currently there are 9 VMs:
 
   * 2 interpreters written in C,
   * 2 JIT implementations (also in C),
   * 1 (interpreter) written in golang,
   * 1 (interpreter) written in Nim_,
-  * and 2 (interpreters) written in Crystal_
+  * 2 (interpreters) written in Crystal_
+  * and 1 written in Clojure
 
 See http://www.boundvariable.org/ for more details about the VM.
 VM images (``codex.umz`` and ``sandmark.umz``) are available there.
@@ -101,6 +102,13 @@ crystal/tail-call.cr
     switch. This way we can give the branch predictor something to work 
     with. Variables access is a bit tricky in this case, hence the use of 
     closures for ops.
+
+clojure/naive.clj
+    Takes **32 minutes** (yes, that's minutes, not seconds) to run the 
+    ``sandmark``. This one is written in purely functional style, only 
+    using persistent data structures and ``loop``/``recur`` for emulating 
+    assignments. This is about as unwieldy to write as it is slow to 
+    execute. So, don't try this at home for low-level bit-crunching stuff.
 
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html

@@ -1,0 +1,4 @@
+{
+ :paths ["."]
+ :deps {smee/binary {:mvn/version "0.5.4"}}
+}
