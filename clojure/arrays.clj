@@ -33,7 +33,8 @@
 (defmacro with-next [& body] `(do ~@body (recur (inc ~'pc) ~'zero)))
 
 (defn run [^ints code]
-  (let [arrays (transient [code])
+  (let [out (java.io.FileOutputStream. (java.io.FileDescriptor/out))
+        arrays (transient [code])
         free (volatile! '())
         r (mk-array 8)]
     (loop [pc (int 0) zero code]
@@ -48,7 +49,9 @@
           4 (with-next (A (unchecked-multiply-int (B) (C))))
           5 (with-next (A (Integer/divideUnsigned (B) (C))))
           6 (with-next (A (int (bit-not (bit-and (B) (C))))))
-          7 :halt
+          7 (do
+              (binding [*out* *err*] (println "arrays:" (count arrays)))
+              :halt)
           8 (with-next
               (let [c (C)
                     a (mk-array c)]
@@ -65,11 +68,12 @@
               (assoc! arrays (C) nil))
           10 (with-next
                (let [c (char (C))]
-                 (print c)
-                 (when (= c \newline) (flush))))
+                 (.write out (C))
+                 (when (= c \newline)
+                   (flush))))
           11 (with-next
                (flush)
-               (C (int (.read ^java.io.BufferedReader *in*))))
+               (C (int (.read ^java.io.Reader *in*))))
           12 (if-not (zero? (B))
                (let [zero (aclone ^ints (arrays (B)))]
                  (assoc! arrays 0 zero)

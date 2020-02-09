@@ -42,7 +42,7 @@
       ; (printf "%3d %d %d %d %d %d\n" pc op (A) (B) (C) (X))
       (case op
         0 (recur (inc pc) arrays free (if (zero? (C)) r (A (B))))
-        1 (recur (inc pc) arrays free (A (aget (arrays (B)) (C))))
+        1 (recur (inc pc) arrays free (A ((arrays (B)) (C))))
         2 (recur (inc pc) (assoc-in arrays [(A) (B)] (C)) free r)
         3 (recur (inc pc) arrays free (A (unchecked-add-int (B) (C))))
         4 (recur (inc pc) arrays free (A (unchecked-multiply-int (B) (C))))
@@ -65,7 +65,7 @@
              (recur (inc pc) arrays free r))
         11 (do
              (flush)
-             (let [c (.read ^java.io.BufferedReader *in*)]
+             (let [c (.read ^java.io.Reader *in*)]
                (recur (inc pc) arrays free (C (int c)))))
         12 (let [arrays
                  (cond-> arrays (not (zero? (B))) (assoc 0 (arrays (B))))]
