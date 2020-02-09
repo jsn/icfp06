@@ -16,8 +16,6 @@
         (assert (= (* 4 (count v)) (.length f)) "weird file size")
         (int-array v)))))
 
-(defn mk-array ^ints [n] (int-array n 0))
-
 (defmacro defregister [sym shift]
   (let [i (if (zero? shift) 'ins `(bit-shift-right ~'ins ~shift))
         rf `(bit-and ~i 7)]
@@ -36,7 +34,7 @@
   (let [out (java.io.FileOutputStream. (java.io.FileDescriptor/out))
         arrays (transient [code])
         free (volatile! '())
-        r (mk-array 8)]
+        r (int-array 8 0)]
     (loop [pc (int 0) zero code]
       (let [ins (aget ^ints zero pc)
             op (bit-and (bit-shift-right ins 28) 15)]
@@ -54,7 +52,7 @@
               :halt)
           8 (with-next
               (let [c (C)
-                    a (mk-array c)]
+                    a (int-array c 0)]
                 (if-let [ai (peek @free)]
                   (do
                     (assoc! arrays ai a)
