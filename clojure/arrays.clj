@@ -19,9 +19,9 @@
 (defmacro defregister [sym shift]
   (let [i (if (zero? shift) 'ins `(bit-shift-right ~'ins ~shift))
         rf `(bit-and ~i 7)]
-  `(defmacro ~sym
-     ([] '(aget ~(with-meta 'r {:tag ints}) ~rf))
-     ([new] (concat '(aset ~'r ~rf) `(~new))))))
+    `(defmacro ~sym
+       ([] '(aget ~'r ~rf))
+       ([new] (concat '(aset ~'r ~rf) `(~new))))))
 
 (defregister C 0)
 (defregister B 3)
@@ -38,10 +38,10 @@
         free (volatile! '())
         r (int-array 8 0)]
     (aset arrays 0 code)
-    (loop [pc (int 0)
+    (loop [pc 0
            zero code
            arrays arrays]
-      (let [ins (aget ^ints zero pc)
+      (let [ins (aget zero pc)
             op (bit-and (bit-shift-right ins 28) 15)]
         ; (printf "%3d %d %d %d %d %d\n" pc op (A) (B) (C) (X))
         (case op
@@ -51,7 +51,7 @@
           3 (with-next (A (unchecked-add-int (B) (C))))
           4 (with-next (A (unchecked-multiply-int (B) (C))))
           5 (with-next (A (Integer/divideUnsigned (B) (C))))
-          6 (with-next (A (int (bit-not (bit-and (B) (C))))))
+          6 (with-next (A (bit-not (bit-and (B) (C)))))
           7 (do
               (binding [*out* *err*] (println "arrays:" @narrays))
               :halt)
@@ -81,13 +81,13 @@
                    (flush))))
           11 (with-next
                (flush)
-               (C (int (.read ^java.io.Reader *in*))))
+               (C (.read ^java.io.Reader *in*)))
           12 (if-not (zero? (B))
                (let [zero (aclone ^ints (aget arrays (B)))]
                  (aset arrays 0 zero)
                  (recur (C) zero arrays))
                (recur (C) zero arrays))
-          13 (with-next (X (int (bit-and ins 0x1ffffff))))
+          13 (with-next (X (bit-and ins 0x1ffffff)))
           (throw (ex-info "unknown opcode" {:opcode ins}))))
   )))
 
