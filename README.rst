@@ -111,7 +111,7 @@ clojure/naive.clj
     execute. So, don't try this at home for low-level bit-crunching stuff.
 
 clojure/arrays.clj
-    Takes **63 seconds** to run the ``sandmark``. This one is written using 
+    Takes **55 seconds** to run the ``sandmark``. This one is written using 
     native arrays and mutable vars. It's almost two orders of magnitude 
     improvement over ``naive.clj``.  Also, the source code is less 
     convoluted. Well, at least somewhat; clojure type hinting does not seem 
