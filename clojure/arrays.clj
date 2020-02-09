@@ -20,10 +20,10 @@
 
 (defmacro defregister [sym shift]
   (let [i (if (zero? shift) 'ins `(bit-shift-right ~'ins ~shift))
-        rf `(~'r (bit-and ~i 7))]
+        rf `(bit-and ~i 7)]
   `(defmacro ~sym
-     ([] '(int (aget ^ints ~@rf)))
-     ([new] (concat '(aset ^ints ~@rf) `(~new))))))
+     ([] '(aget ~(with-meta 'r {:tag ints}) ~rf))
+     ([new] (concat '(aset ~'r ~rf) `(~new))))))
 
 (defregister C 0)
 (defregister B 3)
@@ -43,7 +43,7 @@
         (case op
           0 (with-next (if (zero? (C)) r (A (B))))
           1 (with-next (A (aget ^ints (arrays (B)) (C))))
-          2 (with-next (aset ^ints(arrays (A)) (B) (C)))
+          2 (with-next (aset ^ints (arrays (A)) (B) (C)))
           3 (with-next (A (unchecked-add-int (B) (C))))
           4 (with-next (A (unchecked-multiply-int (B) (C))))
           5 (with-next (A (Integer/divideUnsigned (B) (C))))
@@ -52,7 +52,7 @@
           8 (with-next
               (let [c (C)
                     a (mk-array c)]
-                (if-let [ai (and (= c 3) (peek @free))]
+                (if-let [ai (peek @free)]
                   (do
                     (assoc! arrays ai a)
                     (vswap! free pop)
@@ -61,11 +61,8 @@
                     (B (count arrays))
                     (conj! arrays a)))))
           9 (with-next
-              (let [c (C)
-                    len (alength ^ints (arrays c))]
-                (assoc! arrays (C) nil)
-                (when (= 3 (count (arrays c)))
-                  (vswap! free conj c))))
+              (vswap! free conj (C))
+              (assoc! arrays (C) nil))
           10 (with-next
                (let [c (char (C))]
                  (print c)
