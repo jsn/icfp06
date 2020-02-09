@@ -45,7 +45,7 @@
         (let [ins (aget zero pc)
               op (bit-and (bit-shift-right ins 28) 15)]
           ; (printf "%3d %d %d %d %d %d\n" pc op (A) (B) (C) (X))
-          (case op
+          (case (int op)
             0 (with-next (if (zero? (C)) r (A (B))))
             1 (with-next (A (aget ^ints (aget arrays (B)) (C))))
             2 (with-next (aset ^ints (aget arrays (A)) (B) (C)))
@@ -56,8 +56,7 @@
             7 (do
                 (binding [*out* *err*] (println "arrays:" @narrays))
                 :halt)
-            8 (let [c (C)
-                    a (int-array c 0)]
+            8 (let [a (int-array (C) 0)]
                 (if-let [ai (peek @free)]
                   (with-next
                     (aset arrays ai a)
@@ -65,9 +64,8 @@
                     (B (int ai)))
                   (let [len (alength arrays)
                         arrays
-                        (if (= @narrays len)
-                          (java.util.Arrays/copyOf arrays (* 2 len))
-                          arrays)]
+                        (if-not (= @narrays len) arrays
+                          (java.util.Arrays/copyOf arrays (* 2 len)))]
                     (with-next
                       (B (int @narrays))
                       (aset arrays @narrays a)
