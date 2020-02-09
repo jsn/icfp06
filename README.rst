@@ -111,12 +111,12 @@ clojure/naive.clj
     execute. So, don't try this at home for low-level bit-crunching stuff.
 
 clojure/arrays.clj
-    Takes **90 seconds** (1min 30sec) to run the ``sandmark``. This one is 
-    written using native arrays, mutable vars, and transients. It's more 
-    than an order of magnitude improvement over ``naive.clj``.  Also, the 
-    source code is less convoluted. Well, at least somewhat; clojure type
-    hinting does not seem intuitive to me at all. It's 3 times slower than 
-    e.g. naive C (``switch.c``) or golang, which is actually not too bad.
+    Takes **63 seconds** to run the ``sandmark``. This one is written using 
+    native arrays and mutable vars. It's almost two orders of magnitude 
+    improvement over ``naive.clj``.  Also, the source code is less 
+    convoluted. Well, at least somewhat; clojure type hinting does not seem 
+    intuitive to me at all. It's just 2 times slower than e.g. naive C 
+    (``switch.c``) or golang, which is actually not bad at all.
 
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html
