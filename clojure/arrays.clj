@@ -45,7 +45,7 @@
         (let [ins (aget zero pc)
               op (bit-and (bit-shift-right ins 28) 15)]
           ; (printf "%3d %d %d %d %d %d\n" pc op (A) (B) (C) (X))
-          (case (int op)
+          (case op
             0 (with-next (if (zero? (C)) r (A (B))))
             1 (with-next (A (aget ^ints (aget arrays (B)) (C))))
             2 (with-next (aset ^ints (aget arrays (A)) (B) (C)))

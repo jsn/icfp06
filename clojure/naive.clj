@@ -33,7 +33,7 @@
 (defregister X 25)
 
 (defn run [code]
-  (loop [pc ^int (int 0)
+  (loop [pc 0
          arrays [code]
          free []
          r (mk-array 8)]
@@ -51,14 +51,11 @@
         7 :halt
         8 (let [c (C)
                 a (mk-array c)]
-            (if-let [ai (and (= c 3) (peek free))]
+            (if-let [ai (peek free)]
               (recur (inc pc) (assoc arrays ai a) (pop free) (B ai))
               (recur (inc pc) (conj arrays a) free (B (int (count arrays))))))
-        9 (let [c (C)
-                arrays (assoc arrays (C) nil)]
-            (if (= 3 (count (arrays c)))
-              (recur (inc pc) arrays (conj free c) r)
-              (recur (inc pc) arrays free r)))
+        9 (let [arrays (assoc arrays (C) nil)]
+            (recur (inc pc) arrays (conj free (C)) r))
         10 (let [c (char (C))]
              (print c)
              (when (= c \newline) (flush))
