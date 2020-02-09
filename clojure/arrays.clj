@@ -30,14 +30,14 @@
 (defregister A 6)
 (defregister X 25)
 
-(defmacro with-next [& body] `(do ~@body (recur (inc ~'pc))))
+(defmacro with-next [& body] `(do ~@body (recur (inc ~'pc) ~'zero)))
 
-(defn run [code]
+(defn run [^ints code]
   (let [arrays (transient [code])
         free (volatile! '())
         r (mk-array 8)]
-    (loop [pc (int 0)]
-      (let [ins (aget ^ints (arrays 0) pc)
+    (loop [pc (int 0) zero code]
+      (let [ins (aget ^ints zero pc)
             op (bit-and (bit-shift-right ins 28) 15)]
         ; (printf "%3d %d %d %d %d %d\n" pc op (A) (B) (C) (X))
         (case op
@@ -70,10 +70,11 @@
           11 (with-next
                (flush)
                (C (int (.read ^java.io.BufferedReader *in*))))
-          12 (do
-               (when-not (zero? (B))
-                 (assoc! arrays 0 (aclone ^ints (arrays (B)))))
-               (recur (C)))
+          12 (if-not (zero? (B))
+               (let [zero (aclone ^ints (arrays (B)))]
+                 (assoc! arrays 0 zero)
+                 (recur (C) zero))
+               (recur (C) zero))
           13 (with-next (X (int (bit-and ins 0x1ffffff))))
           (throw (ex-info "unknown opcode" {:opcode ins}))))
   )))
