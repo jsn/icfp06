@@ -29,7 +29,7 @@
 (defregister X 25)
 
 (defmacro with-next [& body]
-  `(do ~@body (recur (inc ~'pc) ~'zero ~'arrays)))
+  `(do ~@body (recur (inc ~'pc) ~'arrays)))
 
 (defn run [^ints code]
   (with-open [out (java.io.FileOutputStream. (java.io.FileDescriptor/out))]
@@ -40,13 +40,12 @@
           r (int-array 8 0)]
       (aset arrays 0 code)
       (loop [pc 0
-             zero code
              arrays arrays]
-        (let [ins (aget zero pc)
+        (let [ins (aget ^ints (aget arrays 0) pc)
               op (bit-and (bit-shift-right ins 28) 15)]
           ; (printf "%3d %d %d %d %d %d\n" pc op (A) (B) (C) (X))
           (case op
-            0 (with-next (if (zero? (C)) r (A (B))))
+            0 (with-next (when-not (zero? (C)) (A (B))))
             1 (with-next (A (aget ^ints (aget arrays (B)) (C))))
             2 (with-next (aset ^ints (aget arrays (A)) (B) (C)))
             3 (with-next (A (unchecked-add-int (B) (C))))
@@ -78,8 +77,8 @@
             12 (if-not (zero? (B))
                  (let [zero (aclone ^ints (aget arrays (B)))]
                    (aset arrays 0 zero)
-                   (recur (C) zero arrays))
-                 (recur (C) zero arrays))
+                   (recur (C) arrays))
+                 (recur (C) arrays))
             13 (with-next (X (bit-and ins 0x1ffffff)))
             (throw (ex-info "unknown opcode" {:opcode ins}))))
         ))))
