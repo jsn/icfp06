@@ -2,10 +2,10 @@
 NUL = [] of UInt32
 
 def load_file(fname)
-  st = File.stat fname
+  st = File.info fname
   raise "weird file size #{st.size}" if st.size % sizeof(UInt32) != 0
   File.open fname do |f|
-    Array.new st.size / sizeof(UInt32) do |i|
+    Array.new st.size // sizeof(UInt32) do |i|
       f.read_bytes UInt32, IO::ByteFormat::BigEndian
     end
   end
@@ -46,7 +46,7 @@ def main
     when 4
       r[a] = r[b] * r[c]
     when 5
-      r[a] = r[b] / r[c]
+      r[a] = r[b] // r[c]
     when 6
       r[a] = ~(r[b] & r[c])
     when 7
