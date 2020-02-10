@@ -60,7 +60,7 @@ proc main() =
     {.computedGoto.}
     var ins = zero[int pc]
 
-    case (ins shr 28) and 15:
+    case range[0 .. 15] (ins shr 28) and 15:
       of 0:
         if C != 0: A = B
       of 1:
