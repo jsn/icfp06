@@ -4,7 +4,6 @@ use std::fs ;
 use std::io ;
 use std::io::prelude::* ;
 use std::collections::HashMap ;
-use std::slice ;
 
 fn read_program(fname: &str) -> std::io::Result<Vec<u32>> {
     let len : usize = fs::metadata(fname)?.len().try_into().unwrap() ;
@@ -14,10 +13,10 @@ fn read_program(fname: &str) -> std::io::Result<Vec<u32>> {
     }
 
     let nwords = len / 4 ;
-    let mut v : Vec<u32> = Vec::with_capacity(nwords) ;
+    let mut v = Vec::with_capacity(nwords) ;
 
     let mut reader = io::BufReader::new(fs::File::open(fname)?) ;
-    let mut b : [u8; 4] = [0; 4] ;
+    let mut b = [0_u8; 4] ;
 
     for _ in 0..nwords {
         reader.read_exact(&mut b)? ;
@@ -35,18 +34,15 @@ fn main() -> std::io::Result<()> {
     let args : Vec<String> = env::args().collect() ;
     let fname = args.get(1).expect("program file must be specified") ;
     let mut zero = read_program(fname)? ;
-    let mut arrs : HashMap<u32, Vec<u32>> = HashMap::new() ;
+    let mut arrs = HashMap::new() ;
 
     let mut pc = 0_u32 ;
     let mut r = [0_u32; 8] ;
-    let mut vcnt = 1 ;
+    let mut vcnt = 0 ;
 
     macro_rules! ARR {
         ($e:expr) => {
-            {
-                let a = $e ;
-                (if a == 0 { &mut zero } else { arrs.get_mut(&a).unwrap() })
-            }
+            (if $e == 0 { &mut zero } else { arrs.get_mut(&$e).unwrap() })
         }
     }
 
@@ -71,23 +67,22 @@ fn main() -> std::io::Result<()> {
             }
             9 => { arrs.remove(&R![C]) ; }
             10 => {
-                let b = R![C] as u8 ;
-                io::stdout().write(slice::from_ref(&b))? ;
+                io::stdout().write(&[R![C] as u8])? ;
             }
             11 => {
-                let mut b = 0_u8 ;
-                io::stdin().read(slice::from_mut(&mut b))? ;
-                R![C] = b as u32 ;
+                let mut b = [0_u8] ;
+                io::stdin().read(&mut b)? ;
+                R![C] = b[0] as u32 ;
             }
             12 => {
-                let b = R![B] ;
-                if b != 0 {
-                    zero = arrs.get(&b).unwrap().clone()
+                if R![B] != 0 {
+                    zero = arrs.get(&R![B]).unwrap().clone()
                 }
                 pc = R![C].wrapping_sub(1) ;
             }
             13 => R![X] = ins & 0x1ffffff,
-            _ => panic!("bad op")
+
+            bad => panic!("bad op {}", bad)
         }
         pc = pc.wrapping_add(1) ;
     }
