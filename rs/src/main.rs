@@ -3,7 +3,6 @@ use std::env ;
 use std::fs ;
 use std::io ;
 use std::io::prelude::* ;
-use fnv::FnvHashMap ;
 
 fn read_program(fname: &str) -> std::io::Result<Vec<u32>> {
     let len : usize = fs::metadata(fname)?.len().try_into().unwrap() ;
@@ -34,15 +33,17 @@ fn main() -> std::io::Result<()> {
     let args : Vec<String> = env::args().collect() ;
     let fname = args.get(1).expect("program file must be specified") ;
     let mut zero = read_program(fname)? ;
-    let mut arrs = FnvHashMap::default() ;
+    let mut free = Vec::new() ;
+    let mut arrs = Vec::new() ;
+
+    arrs.push(vec![0_u32]) ;
 
     let mut pc = 0_u32 ;
     let mut r = [0_u32; 8] ;
-    let mut vcnt = 0 ;
 
     macro_rules! ARR {
         ($e:expr) => {
-            (if $e == 0 { &mut zero } else { arrs.get_mut(&$e).unwrap() })
+            (if $e == 0 { &mut zero } else { &mut arrs[$e as usize] })
         }
     }
 
@@ -60,15 +61,24 @@ fn main() -> std::io::Result<()> {
             5 => R![A] = R![B].wrapping_div(R![C]),
             6 => R![A] = !(R![B] & R![C]),
             7 => {
-                println!("vcnt {}, arrs len {}", vcnt, arrs.len()) ;
+                println!("arrs len {}, free len {}", arrs.len(), free.len()) ;
                 break ;
             }
             8 => {
-                vcnt += 1 ;
-                arrs.insert(vcnt, vec![0_u32; R![C] as usize]) ;
-                R![B] = vcnt ;
+                let v = vec![0_u32; R![C] as usize] ;
+                if let Some(i) = free.pop() {
+                    R![B] = i ;
+                    arrs[i as usize] = v ;
+                } else {
+                    R![B] = arrs.len() as u32 ;
+                    arrs.push(v) ;
+                }
             }
-            9 => { arrs.remove(&R![C]) ; }
+            9 => {
+                free.push(R![C]) ;
+                arrs[R![C] as usize].clear() ;
+                arrs[R![C] as usize].shrink_to_fit() ;
+            }
             10 => {
                 io::stdout().write(&[R![C] as u8])? ;
             }
@@ -79,7 +89,7 @@ fn main() -> std::io::Result<()> {
             }
             12 => {
                 if R![B] != 0 {
-                    zero = arrs.get(&R![B]).unwrap().clone()
+                    zero = arrs[R![B] as usize].clone()
                 }
                 pc = R![C].wrapping_sub(1) ;
             }
