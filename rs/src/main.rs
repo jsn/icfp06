@@ -3,7 +3,7 @@ use std::env ;
 use std::fs ;
 use std::io ;
 use std::io::prelude::* ;
-use std::collections::HashMap ;
+use fnv::FnvHashMap ;
 
 fn read_program(fname: &str) -> std::io::Result<Vec<u32>> {
     let len : usize = fs::metadata(fname)?.len().try_into().unwrap() ;
@@ -34,7 +34,7 @@ fn main() -> std::io::Result<()> {
     let args : Vec<String> = env::args().collect() ;
     let fname = args.get(1).expect("program file must be specified") ;
     let mut zero = read_program(fname)? ;
-    let mut arrs = HashMap::new() ;
+    let mut arrs = FnvHashMap::default() ;
 
     let mut pc = 0_u32 ;
     let mut r = [0_u32; 8] ;
@@ -59,7 +59,10 @@ fn main() -> std::io::Result<()> {
             4 => R![A] = R![B].wrapping_mul(R![C]),
             5 => R![A] = R![B].wrapping_div(R![C]),
             6 => R![A] = !(R![B] & R![C]),
-            7 => break,
+            7 => {
+                println!("vcnt {}, arrs len {}", vcnt, arrs.len()) ;
+                break ;
+            }
             8 => {
                 vcnt += 1 ;
                 arrs.insert(vcnt, vec![0_u32; R![C] as usize]) ;
