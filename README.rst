@@ -8,7 +8,8 @@ A small collection of VM implementations. Currently there are 10 VMs:
   * 1 (interpreter) written in golang,
   * 1 (interpreter) written in Nim_,
   * 2 (interpreters) written in Crystal_
-  * and 2 written in Clojure
+  * 2 (interpreters) written in Clojure,
+  * and 1 interpreter written in Rust
 
 See http://www.boundvariable.org/ for more details about the VM.
 VM images (``codex.umz`` and ``sandmark.umz``) are available there.
@@ -30,6 +31,10 @@ c/switch.c
     laptop to run ``sandmark.umz``. Opcode dispatch is just a C ``switch``, 
     hence the name. Branch misprediction happens almost on every opcode 
     dispatch.
+
+    **EDIT**: (02.05.2022) Apparently C compilers are now smart enough to 
+    generate branchy dispatch instructions even for naive switch code? Now 
+    switch.c is almost as fast as goto.c (~7% slower, perhaps?).
 
 c/goto.c
     Best I can do with pure C so far (w/o e.g. assembly tricks).  Takes 
@@ -67,9 +72,9 @@ Other VMs
 ---------
 
 go/switch/switch.go
-    Takes **30 seconds** (was: **46 seconds**) to run the ``sandmark``, 
-    with GOMAXPROCS=1. Basically a translation of ``switch.c`` to golang, a 
-    very naive implementation.  It should be possible to translate 
+    Takes **21 seconds** (was: **30** and **46 seconds**) to run the 
+    ``sandmark``. Basically a translation of ``switch.c`` to golang, 
+    a very naive implementation.  It should be possible to translate 
     ``goto.c`` to Go too, might improve the performance by I don't know, 
     10%? Quite a tedious task though, since there are no macros in Go.
 
@@ -77,6 +82,9 @@ go/switch/switch.go
     dispatch, the optimizer managed to use computed goto for dispatch, or 
     something. The benchmark now takes 30 seconds instead of 46. Almost as 
     fast as C, very impressive.
+
+    **Update 2**: (02.05.2022) Apparently Go is now much better at 
+    optimizing these things -- now it's almost as fast as C.
 
 nim/switch.nim
     Takes **30 seconds** to run the ``sandmark``. Also a translation of
@@ -117,6 +125,11 @@ clojure/arrays.clj
     convoluted. Well, at least somewhat; clojure type hinting does not seem 
     intuitive to me at all. It's just 2 times slower than e.g. naive C 
     (``switch.c``) or golang, which is actually not bad at all.
+
+rust/src/main.rs
+    Very straightforward implementation in Rust, no ``unsafe``, nothing. 
+    Almost as fast as C interpreters (~15% slower than ``switch.c``). Very 
+    impressive.
 
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html
