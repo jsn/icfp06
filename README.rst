@@ -128,8 +128,8 @@ clojure/arrays.clj
 
 rust/src/main.rs
     Very straightforward implementation in Rust, no ``unsafe``, nothing. 
-    Almost as fast as C interpreters (~15% slower than ``switch.c``). Very 
-    impressive.
+    It's actually about as fast as C interpreters (~5% slower than 
+    ``switch.c``). Very impressive.
 
 .. _dynasm: https://corsix.github.io/dynasm-doc/
 .. _GNU Lightning: https://www.gnu.org/software/lightning/manual/lightning.html

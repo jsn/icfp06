@@ -34,9 +34,7 @@ fn main() -> std::io::Result<()> {
     let fname = args.get(1).expect("program file must be specified") ;
     let mut zero = read_program(fname)? ;
     let mut free = Vec::new() ;
-    let mut arrs = Vec::new() ;
-
-    arrs.push(vec![0_u32]) ;
+    let mut arrs = vec![vec![0_u32]] ;
 
     let mut pc = 0_u32 ;
     let mut r = [0_u32; 8] ;
@@ -80,11 +78,11 @@ fn main() -> std::io::Result<()> {
                 arrs[R![C] as usize].shrink_to_fit() ;
             }
             10 => {
-                io::stdout().write(&[R![C] as u8])? ;
+                io::stdout().write_all(&[R![C] as u8])? ;
             }
             11 => {
                 let mut b = [0_u8] ;
-                io::stdin().read(&mut b)? ;
+                io::stdin().read_exact(&mut b)? ;
                 R![C] = b[0] as u32 ;
             }
             12 => {
